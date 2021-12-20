@@ -1,4 +1,4 @@
-//creating result
+//creating a handler for api result
 const createResult = (error, data) => {
     let result = {}
     if (error) {

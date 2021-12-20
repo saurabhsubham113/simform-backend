@@ -1,9 +1,12 @@
 const express = require('express')
 const fileUpload = require('express-fileupload')
-const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
-
+if (process.env.NODE_ENV !== 'production') {
+    const morgan = require('morgan')
+    //logging information
+    app.use(morgan('dev'))
+}
 //express can handle the incoming json response
 app.use(express.json())
 
@@ -17,8 +20,7 @@ app.use(fileUpload({
 }))
 //cors
 app.use(cors('*'))
-//logging information
-app.use(morgan('dev'))
+
 
 
 //importing all routes

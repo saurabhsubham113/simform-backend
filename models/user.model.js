@@ -65,20 +65,6 @@ userSchema.methods.getJwtToken = async function () {
     })
 }
 
-//genrate forgot password token
-userSchema.methods.getForgotPasswordToken = function () {
-    //generate a long random String
-    const forgotToken = crypto.randomBytes(20).toString('hex')
-
-    //storing the hash of the random String and it will be matched with the hashed String
-    this.forgotPasswordToken = crypto.createHash('sha256').update(forgotToken).digest('hex')
-
-    //time of token
-    this.forgotPasswordExpiry = Date.now() + 2 * 60 * 60 * 1000
-
-    return forgotToken
-}
-
 
 // 'user' is changed to lowercase user and plural in the mongoDB document
 module.exports = mongoose.model('User', userSchema)

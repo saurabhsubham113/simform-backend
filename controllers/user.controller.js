@@ -2,12 +2,12 @@ const User = require('../models/user.model')
 const createResult = require('../utils/responseHandler')
 const fileUpload = require('express-fileupload')
 const cloudinary = require('cloudinary')
-const crypto = require('crypto')
 
 //signup
 exports.signup = async (req, res) => {
     try {
         let result;
+        //if files exist in the request
         if (req.files) {
             let file = req.files.photo
 
@@ -17,10 +17,13 @@ exports.signup = async (req, res) => {
                 crop: "scale"
             })
         }
+        //destructrig body
         const { firstName, lastName, email, password } = req.body
+        // if the params not exist throw an error
         if (!email || !firstName || !lastName || !password) {
             throw new Error("firstname,lastname,email,password are required")
         }
+        //creating user in the DB
         const user = await User.create({
             firstName,
             lastName,
@@ -31,6 +34,7 @@ exports.signup = async (req, res) => {
                 secure_url: result.secure_url
             }
         })
+        //getting token
         const token = await user.getJwtToken()
         user.password = undefined
         res.status(200).send(createResult(null, { user, token }))
@@ -64,74 +68,15 @@ exports.signin = async (req, res) => {
     }
 }
 
+//signout 
 exports.signout = (req, res) => {
-    res.cookie('token', null, {
-        expires: new Date(Date.now()),
-        httpOnly: true
-    }).status(200).send(createResult(null, 'Logout Successful'))
+
+    req.user = null
+    req.token = null
+    res.status(200).send(createResult(null, 'Logout Successful'))
 }
 
-exports.forgotPassword = async (req, res) => {
-    try {
-        const { email } = req.body
-        if (!email) return res.status(400).send(createResult('Email is required'))
-
-        const user = await User.findOne({ email })
-
-        if (!user) return res.status(400).send(createResult('user is not registered'))
-        const forgotToken = user.getForgotPasswordToken()
-
-        await user.save({ validateBeforeSave: false })
-
-        const myUrl = `${req.protocol}://${req.get("host")}/api/v1/password/reset/${forgotToken}`
-
-        const message = `copy and paste this usl in a brpwser to change your password \n\n ${myUrl}`
-
-        await emailHelper({
-            email: user.email,
-            subject: "E-com: Password reset link",
-            message
-        })
-
-        res.status(200).send(createResult(null, 'Email sent successfully'))
-    } catch (error) {
-
-        //if something went wrong flush the value before
-        user.forgotPasswordToken = undefined
-        user.forgotPasswordExpiry = undefined
-        await user.save({ validateBeforeSave: false })
-
-        res.status(500).send(createResult(error.message))
-    }
-}
-
-exports.passwordReset = async (req, res) => {
-    try {
-        const token = req.params.token
-        const encryptedToken = crypto.createHash('sha256').update(token).digest('hex')
-
-        const user = await User.findOne({
-            forgotPasswordToken: encryptedToken,
-            //expiry should be greater than the current date
-            forgotPasswordExpiry: { $gt: Date.now() }
-        })
-
-        if (!user) throw new Error('Token is invalid or expired')
-
-        user.password = req.body.password
-        user.forgotPasswordToken = undefined
-        user.forgotPasswordExpiry = undefined
-        await user.save()
-
-        // const token = await user.getJwtToken()
-        user.password = undefined
-        res.status(200).send(createResult(null, { user, token }))
-
-    } catch (error) {
-        res.status(400).send(createResult(error.message))
-    }
-}
-
+//getting the user details of logged in user
 exports.getLoggedInUserDetails = async (req, res) => {
     try {
         const user = await User.findById(req.user.id)
@@ -141,16 +86,17 @@ exports.getLoggedInUserDetails = async (req, res) => {
     }
 }
 
+//updating the pasword
 exports.updatePassword = async (req, res) => {
     try {
         const userId = req.user.id
 
-        const user = await User.findById(userId).select("+password")
-
+        const user = await User.findById(userId).select("+password")//we have password select false
+        //checking if old password is correct
         const isCorrectOldPassword = await user.isValidatedPassword(req.body.oldPassword)
-
+        
         if (!isCorrectOldPassword) throw new Error('old password is incorrect')
-
+        //adding the new password in the user obj
         user.password = req.body.newPassword
 
         await user.save()
@@ -163,15 +109,16 @@ exports.updatePassword = async (req, res) => {
     }
 }
 
+//updating user
 exports.updateUser = async (req, res) => {
-    const { firstName, lastName, email } = req.body
+    const { firstName, lastName, email, password } = req.body
     try {
-        if (!firstName || !lastName || !email) throw new Error('name and email is required')
+        if (!firstName || !lastName || !email) throw new Error('name and email  is required')
         const userId = req.user.id
         let newData = {
             firstName,
             lastName,
-            email
+            email,
         }
         if (req.files) {
             const imageId = req.user.photo.id
@@ -184,13 +131,13 @@ exports.updateUser = async (req, res) => {
                 width: 150,
                 crop: "scale"
             })
-
+            //adding data in the newData obj
             newData.photo = {
                 id: result.public_id,
                 secure_url: result.secure_url
             }
         }
-
+        //finding user and updating it
         const user = await User.findByIdAndUpdate(userId, newData, {
             new: true,
             runValidators: true,
