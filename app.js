@@ -19,7 +19,7 @@ app.use(fileUpload({
     tempFileDir: '/temp/'
 }))
 //cors
-app.use(cors('*'))
+app.use(cors())
 
 
 
