@@ -5,9 +5,11 @@ const {
     signup, signin, signout,
     forgotPassword, passwordReset,
     getLoggedInUserDetails, updatePassword,
-    updateUser
+    updateUser,
+    welcome
 } = require('../controllers/user.controller')
 
+router.route("/").get(welcome)
 router.route('/signup').post(signup)
 router.route('/signin').post(signin)
 router.route('/signout').get(signout)

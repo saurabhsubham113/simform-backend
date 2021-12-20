@@ -3,6 +3,10 @@ const createResult = require('../utils/responseHandler')
 const fileUpload = require('express-fileupload')
 const cloudinary = require('cloudinary')
 
+// welcome
+exports.welcome = (req, res) => {
+    res.status(200).send(createResult(null, "Simform assignment Backend"))
+}
 //signup
 exports.signup = async (req, res) => {
     try {
@@ -94,7 +98,7 @@ exports.updatePassword = async (req, res) => {
         const user = await User.findById(userId).select("+password")//we have password select false
         //checking if old password is correct
         const isCorrectOldPassword = await user.isValidatedPassword(req.body.oldPassword)
-        
+
         if (!isCorrectOldPassword) throw new Error('old password is incorrect')
         //adding the new password in the user obj
         user.password = req.body.newPassword
